@@ -1,4 +1,6 @@
 .DS_Store
-data/dataset_wikipedia/
-data/dataset_lapresse/
-data/lapresse.db
+data/datasets/dataset_wikipedia/
+data/datasets/dataset_lapresse/
+data/datasets/lapresse.db
+data/cleaned_datasets/dataset_wikipedia/
+data/cleaned_datasets/dataset_lapresse/
