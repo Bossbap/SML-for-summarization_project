@@ -7,3 +7,5 @@ data/datasets/dataset_lapresse/
 data/datasets/lapresse.db
 data/cleaned_datasets/dataset_wikipedia/
 data/cleaned_datasets/dataset_lapresse/
+
+/results/baseline/summaries_lapresse/
