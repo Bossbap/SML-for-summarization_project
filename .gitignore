@@ -9,3 +9,4 @@ data/cleaned_datasets/dataset_wikipedia/
 data/cleaned_datasets/dataset_lapresse/
 
 /results/baseline/summaries_lapresse/
+data/summaries/
