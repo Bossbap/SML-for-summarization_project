@@ -3,7 +3,7 @@ import torch
 from torch.utils.data import Dataset
 
 # Load and split dataset
-data_path = "data/datasets/test"
+data_path = "data/toy_dataset"
 files = sorted(os.listdir(data_path))
 
 cleaned_texts = []
@@ -36,7 +36,7 @@ class SummarizationDataset(Dataset):
 dataset = SummarizationDataset(data_pairs)
 
 # Save dataset object
-os.makedirs("data/datasets", exist_ok=True)
-torch.save(dataset, "data/datasets/summarization_dataset.pt")
+os.makedirs("data", exist_ok=True)
+torch.save(dataset, "data/toy_dataset.pt")
 
 print("Toy dataset loaded and saved successfully.")

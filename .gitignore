@@ -2,12 +2,20 @@
 .vscode/
 
 
-data/datasets/dataset_wikipedia/
-data/datasets/dataset_lapresse/
-data/datasets/lapresse.db
-data/cleaned_datasets/dataset_wikipedia/
 data/cleaned_datasets/dataset_lapresse/
+data/cleaned_datasets/dataset_wikipedia/
+data/datasets
+data/toy_dataset
+
+data.zip
+
+data/cleaned_lapresse_dataset/
+data/generated_summaries_lapresse/
+data/raw_lapresse_dataset/
+data/intrm_wikipedia_dataset/
+data/lapresse.db
 
 /results/baseline/summaries_lapresse/
 data/summaries/
 data/generated_summaries_lapresse/
+/data/baseline/
