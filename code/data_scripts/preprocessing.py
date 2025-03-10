@@ -1,6 +1,7 @@
 import os
 import re
 import langdetect
+import shutil
 from bs4 import BeautifulSoup
 
 # Function to clean text
@@ -14,7 +15,7 @@ def clean_text(text, stats, max_number_char):
         stats["non_french"] += 1
         return None  # Drop file if language detection fails
 
-    # Drop articles above 20000 characters
+    # Drop articles above max_number_char characters
     if len(text) > max_number_char:
         stats["too_long"] += 1
         return None
@@ -26,7 +27,7 @@ def clean_text(text, stats, max_number_char):
     text = re.sub(r"http\S+|www\S+", "", text)
 
     # Remove extra spaces, tabs, blank lines, unknown symbols (keep punctuation)
-    text = re.sub(r"[^\w\sàâäéèêëîïôöùûüçÀÂÄÉÈÊËÎÏÔÖÙÛÜÇ.,;:!?'\"()-]", "", text)
+    text = re.sub(r"[^\w\sàâäéèêëîïôöùûüç.,;:!?'\"()-]", "", text)
     text = re.sub(r"\s+", " ", text).strip()  # Normalize spaces
 
     # Normalize line breaks
@@ -38,8 +39,10 @@ def clean_text(text, stats, max_number_char):
     return text.strip()
 
 def preprocess(input_dir, output_dir, max_number_char):
-    # Ensure output directory exists
-    os.makedirs(output_dir, exist_ok=True)
+    # Clear the output directory before saving new files
+    if os.path.exists(output_dir):
+        shutil.rmtree(output_dir)  # Remove all existing files and subdirectories
+    os.makedirs(output_dir, exist_ok=True)  # Recreate the empty directory
 
     # Statistics for dropped files
     stats = {"too_long": 0, "non_french": 0, "total_files": 0, "processed_files": 0}
@@ -72,11 +75,11 @@ def preprocess(input_dir, output_dir, max_number_char):
     print(f"   ⚠️ Dropped (not in French): {stats['non_french']}\n")
 
 # Directories
-input_dir_wikipedia = "data/datasets/dataset_wikipedia"
-output_dir_wikipedia = "data/cleaned_datasets/dataset_wikipedia"
+input_dir_wikipedia = "data/intrm_wikipedia_dataset/raw_wikipedia_dataset"
+output_dir_wikipedia = "data/intrm_wikipedia_dataset/cleaned_wikipedia_dataset"
 
-input_dir_lapresse = "data/datasets/dataset_lapresse"
-output_dir_lapresse = "data/cleaned_datasets/dataset_lapresse"
+input_dir_lapresse = "data/raw_lapresse_dataset"
+output_dir_lapresse = "data/cleaned_lapresse_dataset"
 
-preprocess(input_dir_wikipedia, output_dir_wikipedia, 30000)
-preprocess(input_dir_lapresse, output_dir_lapresse, 20000)
+preprocess(input_dir_wikipedia, output_dir_wikipedia, 40000)
+preprocess(input_dir_lapresse, output_dir_lapresse, 10000)
