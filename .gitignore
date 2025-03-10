@@ -10,3 +10,4 @@ data/cleaned_datasets/dataset_lapresse/
 
 /results/baseline/summaries_lapresse/
 data/summaries/
+data/generated_summaries_lapresse/

@@ -9,7 +9,7 @@ OUTPUT_DIR = "results"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Define token threshold
-THRESHOLD = 2048  # Adjust as needed
+THRESHOLD = 2250  # Adjust as needed
 
 # Load tokenizer (same as baseline)
 model_name = "meta-llama/Llama-3.2-3B"
