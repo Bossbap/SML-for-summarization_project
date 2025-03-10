@@ -4,12 +4,12 @@ import numpy as np
 from transformers import AutoTokenizer
 
 # Paths
-DATASET_DIR = "data/cleaned_datasets/dataset_lapresse"
-OUTPUT_DIR = "results"
+DATASET_DIR = "data/cleaned_lapresse_dataset"
+OUTPUT_DIR = "evaluations"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Define token threshold
-THRESHOLD = 2048  # Adjust as needed
+THRESHOLD = 2250  # Adjust as needed
 
 # Load tokenizer (same as baseline)
 model_name = "meta-llama/Llama-3.2-3B"
