@@ -89,6 +89,7 @@ class SummarizationDataset(Dataset):
             warnings.warn("A map_func is already defined, it will be overwrite", stacklevel=2)
 
         self.map_func = map_func
+        return self
 
 def get_datasets(dataset_path, summaries_path, random_seed=1):
     data = load_data(dataset_path, summaries_path)
