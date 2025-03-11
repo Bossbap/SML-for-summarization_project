@@ -118,7 +118,7 @@ def get_datasets(dataset_path, summaries_path, random_seed=1):
     coarse_strata = np.digitize(lengths, bins=quantiles)
 
     train_data, temp_data, train_strata, temp_strata = train_test_split(
-        data, coarse_strata, test_size=0.4, random_state=random_seed, stratify=coarse_strata
+        data, coarse_strata, test_size=0.2, random_state=random_seed, stratify=coarse_strata
     )
 
     val_data, test_data, _, _ = train_test_split(
