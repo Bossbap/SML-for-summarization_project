@@ -1,29 +1,32 @@
-import pandas as pd
-import transformers
-from datasets import Dataset
 import os
 import torch
+import sys
 
 from peft import (
     LoraConfig,
-    get_peft_model,
+    get_peft_model
 )
+
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
+    TrainingArguments,
+    Trainer,
+    DataCollatorForSeq2Seq
 )
-from transformers import DataCollatorForSeq2Seq
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils.dataset import get_datasets
+
 
 MODEL_NAME = "meta-llama/Llama-3.2-3B"
-
-device = "cuda:0"
 
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
     device_map="auto",
     trust_remote_code=True,
-    torch_dtype=torch.float16  # Explicitly setting dtype
-).to(device)  # Ensure it is moved to CUDA
+    torch_dtype=torch.float16
+)
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 tokenizer.pad_token = tokenizer.eos_token
@@ -37,75 +40,51 @@ config = LoraConfig(
     task_type="CAUSAL_LM"
 )
 
-model = get_peft_model(
-    model,
-    config
-)
+model = get_peft_model(model, config)
 
-for name, param in model.named_parameters():
-    if param.requires_grad:
-        print(name)  # This should print LoRA layers
-
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
-data_path = "data/cleaned_datasets/dataset_lapresse"
-summaries_path = "data/generated_summaries_lapresse"
-
-# Fetch files
-texts = []
-summaries = []
-
-for filename in os.listdir(data_path):
-    text_file = os.path.join(data_path, filename)
-    summary_file = os.path.join(summaries_path, filename)
-    
-    if os.path.exists(summary_file):
-        with open(text_file, "r", encoding="utf-8") as tf, open(summary_file, "r", encoding="utf-8") as sf:
-            texts.append(tf.read().strip())
-            summaries.append(sf.read().strip())
-
-# Create a pandas DataFrame
-df = pd.DataFrame({"text": texts, "summary": summaries})
-
-# Convert to Hugging Face Dataset
-dataset = Dataset.from_pandas(df)
-
-data = {"train": dataset}
-
-def generate_prompt(data_point):
-    return f"<texte>: {data_point['text']}\n<résumé>: {data_point['summary']}"
+# adapter_config = PrefixTuningConfig(
+#     task_type="CAUSAL_LM",
+#     num_virtual_tokens=40,
+#     token_dim=4096,
+#     prefix_projection=True,
+# )
+# model = get_peft_model(model, adapter_config)
 
 def generate_and_tokenize_prompt(data_point):
-    full_prompt = generate_prompt(data_point)+tokenizer.eos_token 
-    tokenized_full_prompt = tokenizer(full_prompt, return_tensors='pt')
-    labels = tokenized_full_prompt.input_ids.clone()
-
-    end_prompt_idx = full_prompt.find("<résumé>:")
-
-    labels[:, :end_prompt_idx] = -100
-
+    initial_text, summary = data_point
+    text = f"<texte>: {initial_text}\n<résumé>: "
+    summary = f"{summary}{tokenizer.eos_token}"
+    
+    tokenized_text = tokenizer(text, truncation=True, max_length=4096, add_special_tokens=False)
+    tokenized_summary = tokenizer(summary, truncation=True, max_length=1024, add_special_tokens=False)
+    
+    input_ids = tokenized_text.input_ids + tokenized_summary.input_ids
+    labels = [-100] * len(tokenized_text.input_ids) + tokenized_summary.input_ids
+    
     return {
-        'input_ids': tokenized_full_prompt.input_ids.flatten(),
+        'input_ids': input_ids,
         'labels': labels,
-        'attention_mask': tokenized_full_prompt.attention_mask.flatten(),
+        'attention_mask': [1] * len(input_ids)
     }
 
-data = data["train"].shuffle(seed=42).map(generate_and_tokenize_prompt)
+data_path = "data/cleaned_lapresse_dataset"
+summaries_path = "data/generated_summaries_lapresse"
 
-OUTPUT_DIR = "experiments"
+train_dataset, val_dataset, test_dataset = get_datasets(data_path, summaries_path)
 
-# Training arguments
-training_args = transformers.TrainingArguments(
-    label_names=["labels"],  # Explicitly specify label names
+train_dataset = train_dataset.map(generate_and_tokenize_prompt)
+val_dataset = val_dataset.map(generate_and_tokenize_prompt)
+
+training_args = TrainingArguments(
     per_device_train_batch_size=1,
-    gradient_accumulation_steps=8,  # Reduced to prevent OOM
+    gradient_accumulation_steps=8,
     num_train_epochs=1,
     learning_rate=2e-4,
-    fp16=True,  # Use FP16 instead of BF16 if needed
+    fp16=True,
     save_total_limit=3,
     logging_steps=20,
     output_dir="output_dir",
-    max_steps=600,   # Try more steps if you can
+    max_steps=600,
     optim="paged_adamw_8bit",
     lr_scheduler_type="cosine",
     warmup_ratio=0.05,
@@ -113,14 +92,20 @@ training_args = transformers.TrainingArguments(
 )
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+# os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 model.config.use_cache = False
 
-trainer = transformers.Trainer(
+trainer = Trainer(
     model=model,
-    train_dataset=data,
+    train_dataset=train_dataset,
     args=training_args,
     data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model),
 )
 
 trainer.train()
+
+model_save_path = "models/fine_tuned_llama3.2-3B_V1"
+os.makedirs("models", exist_ok=True)
+model.save_pretrained(model_save_path)
+tokenizer.save_pretrained(model_save_path)

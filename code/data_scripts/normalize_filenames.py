@@ -17,6 +17,9 @@ def rename_files(directory):
             print(f"Renamed: {filename} → {new_filename}")
 
 # Apply renaming to both article and summary folders
-rename_files("results/baseline/summaries_lapresse")
+rename_files("data/cleaned_lapresse_dataset")
+rename_files("data/raw_lapresse_dataset")
+rename_files("data/generated_summaries_lapresse")
+rename_files("data/baseline")
 
 print("✅ Filenames cleaned and normalized.")

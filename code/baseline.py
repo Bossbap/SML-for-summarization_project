@@ -4,7 +4,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 from tqdm import tqdm
 
 # Paths
-INPUT_FOLDER = "data/lapresse_cleaned_dataset"
+INPUT_FOLDER = "data/cleaned_lapresse_dataset"
 OUTPUT_FOLDER = "data/baseline"
 MODEL_NAME = "meta-llama/Llama-3.2-3B"
 
