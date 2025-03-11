@@ -3,8 +3,6 @@
 ## Project Overview
 This project focuses on **fine-tuning a Small Language Model (SML)** for the task of **French text summarization**, using a dataset of geopolitical articles. The goal is to train a lightweight model capable of generating accurate and concise summaries, making it suitable for resource-constrained environments.
 
----
-
 ## Project Workflow
 
 ### 1. Data Collection

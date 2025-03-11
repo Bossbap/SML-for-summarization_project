@@ -1,4 +1,7 @@
 from rouge_score import rouge_scorer
+from bert_score import score
+import os
+import torch
 
 def score_summary_rouge(initial_text, summary):
     scorer = rouge_scorer.RougeScorer(['rouge1', 'rouge2', 'rougeL'], use_stemmer=True)
@@ -9,31 +12,58 @@ def score_summary_rouge(initial_text, summary):
         "ROUGE-L": scores['rougeL'].fmeasure
     }
 
+torch.backends.cuda.enable_flash_sdp(False)
+def score_summary_bertscore(initial_text, summary, lang="fr", device_type="cuda"):
+    device = torch.device(device_type)
+    with torch.amp.autocast(device_type=device_type):
+        P, R, F1 = score([summary], [initial_text], lang=lang, device=device, nthreads=1)
+    return F1.item()
 
-from bert_score import score
-import torch
-def score_summary_bertscore(initial_text, summary, lang="fr", device="cuda"):
-    device = torch.device(device)
-    P, R, F1 = score([summary], [initial_text], lang=lang, device=device)
-    return F1.item()  # F1-score captures overall similarity
 
-
-from transformers import pipeline
-
-# grader = pipeline("text-classification", model="mistralai/Mistral-7B-Instruct-v0.3")
-
-def score_summary_llm(initial_text, summary):
-    prompt = f"""
-    Évaluez la qualité du résumé suivant en lui attribuant une note de 0 à 10.
+def score_summary_llm(model, tokenizer, initial_text, summary):
+    """
+    Uses the Gemini API to evaluate the quality of a summary.
     
-    Texte original:
+    Args:
+        initial_text (str): The original text.
+        summary (str): The summary to evaluate.
+    
+    Returns:
+        float: Score between 0 and 1. (one is the best)
+    """
+
+    # Construct the prompt
+    prompt = f"""
+    Veuillez évaluer la qualité du résumé ci-dessous en lui attribuant une note finale comprise entre 0.00 et 10.00. Cette note doit refléter l’évaluation globale du résumé selon les critères suivants :
+
+    Fidélité : Le résumé restitue-t-il correctement et complètement les informations essentielles du texte original ?
+    Concision : Le résumé présente-t-il l'information de manière synthétique sans détails superflus ?
+    Clarté : Le résumé est-il formulé de manière claire, compréhensible et structurée ?
+    Contect : Le résumé est-il correctement contextualisé
+
+    0.00 signifie « très mauvais »
+    10.00 signifie « excellent »
+    Répondez uniquement avec un nombre décimal à deux chiffres après la virgule (par exemple, 7.58).
+
+    Texte original :
     {initial_text}
 
-    Résumé:
+    ––––
+    Résumé :
     {summary}
-
-    Notez le résumé en fonction de sa fidélité, concision et clarté (0 = très mauvais, 10 = excellent).
     """
-    score = grader(prompt)[0]["score"]  # Extract score
-    return round(score * 10, 2)  # Convert to 0-10 scale
 
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+
+    with torch.no_grad():
+        output = model.generate(**inputs, max_new_tokens=10)
+
+    score_text = tokenizer.decode(output[0], skip_special_tokens=True)[len(prompt):].split()[0]
+    
+    try:
+        score = float(score_text.strip())
+    except ValueError:
+        score = 0  # fallback if parsing fails
+
+    return round(score, 2) / 10
+   
