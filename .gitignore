@@ -1,6 +1,8 @@
 .DS_Store
 .vscode/
 
+__pycache__
+
 
 data/cleaned_datasets/dataset_lapresse/
 data/cleaned_datasets/dataset_wikipedia/
