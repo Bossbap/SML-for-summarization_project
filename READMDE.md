@@ -1,6 +1,8 @@
 # Fine-Tuning Mistral with Curriculum Learning  
 Baptiste Geisenberger & Enzo Pinchon
 
+github link: https://github.com/Bossbap/SML-for-summarization_project
+
 ## Overview  
 This project fine-tunes a **Mistral** model using **LoRA** and **Curriculum Learning** to improve text summarization quality. The dataset is processed dynamically, ranking examples from easiest to hardest.  
 
