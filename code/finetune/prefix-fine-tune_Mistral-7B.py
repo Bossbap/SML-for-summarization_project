@@ -27,9 +27,12 @@ def print_trainable_parameters(model):
         if param.requires_grad:
             print(f"{name}: {param.shape}")
 
+# --------------------------------------------------
+# RUN FROM /
+# --------------------------------------------------
 MODEL_NAME = "mistralai/Mistral-7B-v0.1"
-CHECKPOINT_SAVE = "models/checkpoint/LORA-tuning_Mistral-7B"
-MODEL_SAVE = "models/LORA-fine-tuned_Mistral-7B"
+CHECKPOINT_SAVE = "data/models/checkpoint/LORA-tuning_Mistral-7B"
+MODEL_SAVE = "data/models/LORA-fine-tuned_Mistral-7B"
 
 bnb_config = BitsAndBytesConfig(
     load_in_4bit=True,
@@ -74,8 +77,8 @@ def generate_and_tokenize_prompt(filename, initial_text, summary):
         'attention_mask': [1] * len(input_ids)
     }
 
-data_path = "data/cleaned_lapresse_dataset"
-summaries_path = "data/generated_summaries_lapresse"
+data_path = "data/cleaned_datasets/dataset_lapresse"
+summaries_path = "data/summaries_datasets/mistral-summaries"
 
 train_dataset, val_dataset, test_dataset = get_datasets(data_path, summaries_path)
 print(len(train_dataset))

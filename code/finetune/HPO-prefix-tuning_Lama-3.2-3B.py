@@ -24,9 +24,12 @@ from transformers import (
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.dataset import get_datasets
 
+# --------------------------------------------------
+# RUN FROM /
+# --------------------------------------------------
 MODEL_NAME = "meta-llama/Llama-3.2-3B"
-data_path = "data/cleaned_lapresse_dataset"
-summaries_path = "data/generated_summaries_lapresse"
+data_path = "data/cleaned_datasets/dataset_lapresse"
+summaries_path = "data/summaries_datasets/mistral-summaries"
 
 def objective(trial: optuna.trial.Trial):
     # ----------------------------

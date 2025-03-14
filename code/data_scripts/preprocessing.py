@@ -68,18 +68,21 @@ def preprocess(input_dir, output_dir, max_number_char):
                     file.write(cleaned_text)
 
     # Print statistics
-    print(f"\n📊 Preprocessing complete for {input_dir}:")
-    print(f"   📝 Total articles processed: {stats['total_files']}")
-    print(f"   ✅ Successfully cleaned & saved: {stats['processed_files']}")
-    print(f"   ⚠️ Dropped (too long): {stats['too_long']}")
-    print(f"   ⚠️ Dropped (not in French): {stats['non_french']}\n")
+    print(f"\nPreprocessing complete for {input_dir}:")
+    print(f"   Total articles processed: {stats['total_files']}")
+    print(f"   Successfully cleaned & saved: {stats['processed_files']}")
+    print(f"   Dropped (too long): {stats['too_long']}")
+    print(f"   Dropped (not in French): {stats['non_french']}\n")
 
-# Directories
+# --------------------------------------------------
+# RUN FROM /
+# --------------------------------------------------
+
 input_dir_wikipedia = "data/intrm_wikipedia_dataset/raw_wikipedia_dataset"
 output_dir_wikipedia = "data/intrm_wikipedia_dataset/cleaned_wikipedia_dataset"
 
 input_dir_lapresse = "data/raw_lapresse_dataset"
-output_dir_lapresse = "data/cleaned_lapresse_dataset"
+output_dir_lapresse = "data/cleaned_datasets/dataset_lapresse"
 
 preprocess(input_dir_wikipedia, output_dir_wikipedia, 40000)
 preprocess(input_dir_lapresse, output_dir_lapresse, 10000)

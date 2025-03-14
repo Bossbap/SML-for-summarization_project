@@ -16,8 +16,12 @@ def rename_files(directory):
             os.rename(old_path, new_path)
             print(f"Renamed: {filename} → {new_filename}")
 
+# --------------------------------------------------
+# RUN FROM /
+# --------------------------------------------------
+
 # Apply renaming to both article and summary folders
-rename_files("data/cleaned_lapresse_dataset")
+rename_files("data/cleaned_datasets/dataset_lapresse")
 rename_files("data/raw_lapresse_dataset")
 rename_files("data/generated_summaries_lapresse")
 rename_files("data/baseline")

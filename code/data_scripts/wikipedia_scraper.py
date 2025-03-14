@@ -6,17 +6,14 @@ import concurrent.futures
 import threading
 from queue import Queue
 
-# Constants
 LANGUAGE = "fr"
 START_PAGE = "Relations_internationales"
 DATASET_DIR = "dataset2"
 MAX_PAGES = 6000
 MIN_CHAR_COUNT = 1500
 
-# Initialize Wikipedia API
 wiki_wiki = wikipediaapi.Wikipedia(user_agent='Baptiste', language=LANGUAGE)
 
-# Create dataset directory if it doesn't exist
 os.makedirs(DATASET_DIR, exist_ok=True)
 
 # Thread-safe queue for URLs to visit
@@ -86,6 +83,10 @@ num_threads = 8
 with concurrent.futures.ThreadPoolExecutor(max_workers=num_threads) as executor:
     for _ in range(num_threads):
         executor.submit(process_page)
+
+# --------------------------------------------------
+# RUN FROM /
+# --------------------------------------------------
 
 queue.join()
 print(f"Scraping completed. {saved_count} pages saved.")

@@ -6,11 +6,13 @@ from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
-# Define model and directory paths.
-checkpoint_path = "models/checkpoint/prefix-tuning_Mistral-7B/checkpoint-4000"
+# --------------------------------------------------
+# RUN FROM /
+# --------------------------------------------------
+checkpoint_path = "data/models/checkpoint/prefix-tuning_Mistral-7B/checkpoint-4000"
 base_model_name = "mistralai/Mistral-7B-v0.1"
-input_dir = "data/cleaned_lapresse_dataset"
-output_dir = "data/LORA-tuning_Mistral-7B_summaries"
+input_dir = "data/cleaned_datasets/dataset_lapresse"
+output_dir = "data/generated_summaries_fine-tuned_models/LORA-tuning_Mistral-7B_summaries"
 batch_size = 16
 
 os.makedirs(output_dir, exist_ok=True)

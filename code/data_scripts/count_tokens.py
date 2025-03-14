@@ -3,8 +3,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from transformers import AutoTokenizer
 
-# Paths
-DATASET_DIR = "data/cleaned_lapresse_dataset"
+# --------------------------------------------------
+# RUN FROM /
+# --------------------------------------------------
+
+DATASET_DIR = "data/cleaned_datasets/dataset_lapresse"
 OUTPUT_DIR = "evaluations"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -13,10 +16,8 @@ model_name = "meta-llama/Llama-3.2-3B"
 tokenizer = AutoTokenizer.from_pretrained(model_name)
 tokenizer.pad_token = tokenizer.eos_token
 
-# Same prompt format as in baseline script
 PROMPT_TEMPLATE = "Résumes le texte suivant:\n\n{}"
 
-# Get all .txt files in dataset directory
 text_files = [os.path.join(DATASET_DIR, f) for f in os.listdir(DATASET_DIR) if f.endswith(".txt")]
 total_files = len(text_files)
 
@@ -37,10 +38,10 @@ for i, file_path in enumerate(text_files):
         token_counts.append(num_tokens)
 
         # Print progress
-        print(f"✅ Processed {i + 1}/{total_files}: {file_path} | Tokens: {num_tokens}")
+        print(f"Processed {i + 1}/{total_files}: {file_path} | Tokens: {num_tokens}")
 
     except Exception as e:
-        print(f"❌ Error processing {file_path}: {e}")
+        print(f"Error processing {file_path}: {e}")
 
 # Compute statistics
 min_tokens = min(token_counts)
@@ -50,7 +51,7 @@ q1 = np.percentile(token_counts, 25)
 median = np.percentile(token_counts, 50)  # Q2
 q3 = np.percentile(token_counts, 75)
 
-print(f"📊 Token Statistics:\n"
+print(f"Token Statistics:\n"
         f" - Min: {min_tokens}\n"
         f" - Max: {max_tokens}\n"
         f" - Average: {avg_tokens:.2f}\n"
@@ -90,4 +91,4 @@ output_chart_path = os.path.join("token_count_histogram.png")
 plt.savefig(output_chart_path, dpi=300)
 plt.show()
 
-print(f"📊 Token count histogram complete. Chart saved as: {output_chart_path}")
+print(f"Token count histogram complete. Chart saved as: {output_chart_path}")

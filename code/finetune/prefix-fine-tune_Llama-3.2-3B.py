@@ -27,9 +27,12 @@ def print_trainable_parameters(model):
         if param.requires_grad:
             print(f"{name}: {param.shape}")
 
+# --------------------------------------------------
+# RUN FROM /
+# --------------------------------------------------
 MODEL_NAME = "meta-llama/Llama-3.2-3B"
-CHECKPOINT_SAVE = "models/checkpoint/prefix-tuning_Llama-3.2-3B"
-MODEL_SAVE = "models/prefix-fine-tuned_Llama-3.2-3B"
+CHECKPOINT_SAVE = "data/models/checkpoint/prefix-tuning_Llama-3.2-3B"
+MODEL_SAVE = "data/models/prefix-fine-tuned_Llama-3.2-3B"
 
 bnb_config = BitsAndBytesConfig(
     load_in_8bit = True,
@@ -72,8 +75,8 @@ def generate_and_tokenize_prompt(filename, initial_text, summary):
         'attention_mask': [1] * len(input_ids)
     }
 
-data_path = "data/cleaned_lapresse_dataset"
-summaries_path = "data/generated_summaries_lapresse"
+data_path = "data/cleaned_datasets/dataset_lapresse"
+summaries_path = "data/summaries_datasets/mistral-summaries"
 
 train_dataset, val_dataset, test_dataset = get_datasets(data_path, summaries_path)
 print(len(train_dataset))

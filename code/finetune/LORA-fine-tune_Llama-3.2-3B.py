@@ -19,9 +19,12 @@ from transformers import (
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.dataset import get_datasets
 
+# --------------------------------------------------
+# RUN FROM /
+# --------------------------------------------------
 MODEL_NAME = "meta-llama/Llama-3.2-3B"
-CHECKPOINT_SAVE = "models/checkpoint/LORA-tuning_Llama-3.2-3B"
-MODEL_SAVE = "models/LORA-fine-tuned_Llama-3.2-3B"
+CHECKPOINT_SAVE = "data/models/checkpoint/LORA-tuning_Llama-3.2-3B"
+MODEL_SAVE = "data/models/LORA-fine-tuned_Llama-3.2-3B"
 
 def print_trainable_parameters(model):
     total_params = sum(p.numel() for p in model.parameters())
@@ -77,8 +80,8 @@ def generate_and_tokenize_prompt(filename, initial_text, summary):
         'attention_mask': [1] * len(input_ids)
     }
 
-data_path = "data/cleaned_lapresse_dataset"
-summaries_path = "data/generated_summaries_lapresse"
+data_path = "data/cleaned_datasets/dataset_lapresse"
+summaries_path = "data/summaries_datasets/mistral-summaries"
 
 train_dataset, val_dataset, test_dataset = get_datasets(data_path, summaries_path)
 train_dataset = train_dataset.map(generate_and_tokenize_prompt)

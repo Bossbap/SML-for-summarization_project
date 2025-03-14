@@ -5,11 +5,13 @@ from tqdm import tqdm
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
-# Define model and directory paths.
-model_save_path = "models/LORA-fine-tuned_Mistral-7B"
+# --------------------------------------------------
+# RUN FROM /
+# --------------------------------------------------.
+model_save_path = "data/models/LORA-fine-tuned_Mistral-7B"
 base_model_name = "mistralai/Mistral-7B-v0.1"  # Ensure this matches your fine-tuning
-input_dir = "data/cleaned_lapresse_dataset"
-output_dir = "data/LORA-tuning_Mistral-7B_summaries"
+input_dir = "data/cleaned_datasets/dataset_lapresse"
+output_dir = "data/generated_summaries_fine-tuned_models/LORA-tuning_Mistral-7B_summaries"
 batch_size = 8
 
 os.makedirs(output_dir, exist_ok=True)
