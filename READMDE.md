@@ -1,4 +1,5 @@
 # Fine-Tuning Mistral with Curriculum Learning  
+Baptiste Geisenberger & Enzo Pinchon
 
 ## Overview  
 This project fine-tunes a **Mistral** model using **LoRA** and **Curriculum Learning** to improve text summarization quality. The dataset is processed dynamically, ranking examples from easiest to hardest.  
@@ -15,4 +16,4 @@ This project fine-tunes a **Mistral** model using **LoRA** and **Curriculum Lear
    pip install -r requirements.txt
 
 ## Download the dataset:
-Place the `data` folder in the project root (link to download: Drive Link)
+Place the `data` folder in the project root (link to download: [Drive Link](https://drive.google.com/drive/u/0/folders/1RVb7e_dyLVbgpN5AF7MstELhr9mbmGWj))
