@@ -1,3 +1,4 @@
+import threading
 from rouge_score import rouge_scorer
 from bert_score import score
 import os
@@ -51,19 +52,71 @@ def score_summary_llm(model, tokenizer, initial_text, summary):
     ––––
     Résumé :
     {summary}
-    """
+    ____
 
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    Note (entre 0.00 et 10.00):
+    """
+    with tokenizer_lock:
+        inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
 
     with torch.no_grad():
         output = model.generate(**inputs, max_new_tokens=10)
 
-    score_text = tokenizer.decode(output[0], skip_special_tokens=True)[len(prompt):].split()[0]
+    if len(output) == 0:
+        print("No output for LLM score, initial_text or summary may have a problem.")
+        return 0
+    with tokenizer_lock:
+        score_text = tokenizer.decode(output[0], skip_special_tokens=True)[len(prompt):].split()[0]
     
     try:
         score = float(score_text.strip())
     except ValueError:
         score = 0  # fallback if parsing fails
 
+    if score > 10:
+        print("Out of bound score")
+
     return round(score, 2) / 10
    
+import torch.nn.functional as F
+import multiprocessing as mp
+
+manager = mp.Manager()
+tokenizer_lock = manager.Lock()
+
+def get_sentence_embedding(model, tokenizer, text, max_length=512):
+    """
+    Computes a sentence embedding by encoding the text and averaging the 
+    last hidden states.
+    """
+
+    with tokenizer_lock:
+        inputs = tokenizer(text, return_tensors="pt", truncation=True, max_length=max_length)
+    
+    inputs = {k: v.to(model.device) for k, v in inputs.items()}
+    with torch.no_grad():
+        # Request hidden states; note: causal models may not have "pooler_output"
+        outputs = model(**inputs, output_hidden_states=True, return_dict=True)
+    # Use the last hidden layer (shape: [batch_size, seq_len, hidden_dim])
+    last_hidden = outputs.hidden_states[-1]
+    # Average across the sequence length to get a fixed-size embedding
+    embedding = last_hidden.mean(dim=1)
+    return embedding
+
+def score_summary_ruse(model, tokenizer, original_text, summary_text):
+    """
+    Computes a RUSE-like score using a causal LM from Hugging Face:
+      1. Get embeddings for both texts by averaging their final hidden states.
+      2. Compute the cosine similarity.
+      3. Transform the cosine similarity from [-1, 1] to a 0–1 scale.
+
+      return score (0, 1), embedding diff
+    """
+    emb_orig = get_sentence_embedding(model, tokenizer, original_text)
+    emb_sum = get_sentence_embedding(model, tokenizer, summary_text)
+    
+    # Compute cosine similarity between embeddings (returns a tensor of shape [1])
+    cosine_sim = F.cosine_similarity(emb_orig, emb_sum)
+    # Transform similarity from [-1, 1] to [0, 1]
+    score = ((cosine_sim + 1) / 2)
+    return round(score.item(), 2), emb_orig - emb_sum
