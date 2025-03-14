@@ -3,9 +3,11 @@ import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from tqdm import tqdm
 
-# Paths and model name
-INPUT_FOLDER = "data/cleaned_lapresse_dataset"
-OUTPUT_FOLDER = "data/baseline_mistral"
+# --------------------------------------------------
+# RUN FROM /
+# --------------------------------------------------
+INPUT_FOLDER = "data/cleaned_datasets/dataset_lapresse"
+OUTPUT_FOLDER = "data/baseline_generated_summaries/baseline_mistral"
 MODEL_NAME = "mistralai/Mistral-7B-v0.1"
 
 # Ensure output folder exists
