@@ -7,7 +7,6 @@ import json
 
 from peft import (
     LoraConfig,
-    PrefixTuningConfig,
     get_peft_model
 )
 
@@ -33,15 +32,12 @@ def objective(trial: optuna.trial.Trial):
     # Sample hyperparameters
     # ----------------------------
     # LoRA configuration
-    lora_rank = trial.suggest_categorical("lora_rank", [16, 32, 64])
+    lora_rank = trial.suggest_categorical("lora_rank", [4,8,16])
     lora_alpha = 2 * lora_rank
     lora_dropout = trial.suggest_float("lora_dropout", 0.01, 0.2)
     
-    # Prefix Tuning configuration
-    num_virtual_tokens = trial.suggest_int("num_virtual_tokens", 20, 100)
-    
     # TrainingArguments configuration
-    gradient_accumulation_steps = trial.suggest_int("gradient_accumulation_steps", 4, 16, step=4)
+    gradient_accumulation_steps = trial.suggest_int("gradient_accumulation_steps", 2,8)
     learning_rate = trial.suggest_loguniform("learning_rate", 1e-5, 1e-3)
     lr_scheduler_type = trial.suggest_categorical("lr_scheduler_type", ["cosine", "linear", "polynomial"])
     warmup_ratio = trial.suggest_float("warmup_ratio", 0.0, 0.2)
@@ -49,7 +45,6 @@ def objective(trial: optuna.trial.Trial):
     # Print the hyperparameter combination for this trial
     print("Trial parameters:")
     print(f"  lora_rank: {lora_rank}, lora_alpha: {lora_alpha}, lora_dropout: {lora_dropout}")
-    print(f"  num_virtual_tokens: {num_virtual_tokens}")
     print(f"  gradient_accumulation_steps: {gradient_accumulation_steps}")
     print(f"  learning_rate: {learning_rate}")
     print(f"  lr_scheduler_type: {lr_scheduler_type}")
@@ -59,16 +54,18 @@ def objective(trial: optuna.trial.Trial):
     # Initialize model and tokenizer for this trial
     # ----------------------------
     bnb_config = BitsAndBytesConfig(
-        load_in_8bit = True,
-        llm_int8_threshold = 6.0,
-    )
+            load_in_4bit=True,
+            bnb_4bit_quant_type="nf4",
+            bnb_4bit_compute_dtype=torch.bfloat16,
+            bnb_4bit_use_double_quant=False
+        )
 
     model = AutoModelForCausalLM.from_pretrained(
         MODEL_NAME,
         device_map={"": 0},
         trust_remote_code=True,
         torch_dtype=torch.float16,
-        # quantization_config=bnb_config
+        quantization_config=bnb_config
     )
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
     tokenizer.pad_token = tokenizer.eos_token
@@ -80,7 +77,7 @@ def objective(trial: optuna.trial.Trial):
         prompt = f"<titre>: {filename}\n<texte>: {initial_text}\n<résumé>: "
         summary = f"{summary}{tokenizer.eos_token}"
         
-        tokenized_prompt = tokenizer(prompt, truncation=True, max_length=4096, add_special_tokens=False)
+        tokenized_prompt = tokenizer(prompt, truncation=True, max_length=2000, add_special_tokens=False)
         tokenized_summary = tokenizer(summary, truncation=True, max_length=1024, add_special_tokens=False)
         
         input_ids = tokenized_prompt.input_ids + tokenized_summary.input_ids
@@ -104,16 +101,6 @@ def objective(trial: optuna.trial.Trial):
         task_type="CAUSAL_LM"
     )
     model = get_peft_model(model, lora_config)
-    
-    # ----------------------------
-    # Apply Prefix Tuning configuration
-    # ----------------------------
-    adapter_config = PrefixTuningConfig(
-        task_type="CAUSAL_LM",
-        num_virtual_tokens=num_virtual_tokens,
-        prefix_projection=True,
-    )
-    model = get_peft_model(model, adapter_config)
     
     # ----------------------------
     # Load and process datasets
@@ -187,7 +174,7 @@ print("  Params: ")
 for key, value in trial.params.items():
     print("    {}: {}".format(key, value))
 
-with open("hyper-parameter_config_Llama-3.2-3B.json", "w") as f:
+with open("hyper-parameter_config_LORA_Mistral-7B.json", "w") as f:
     json.dump(trial.params, f, indent=4)
 
-print("Best parameters saved to hyper-parameter_config_Llama-3.2-3B.json")
+print("Best parameters saved to hyper-parameter_config_LORA_Mistral-7B.json")

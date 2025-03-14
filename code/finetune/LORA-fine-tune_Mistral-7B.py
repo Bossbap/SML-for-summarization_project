@@ -1,0 +1,119 @@
+import os
+import torch
+import sys
+
+from peft import (
+    LoraConfig,
+    get_peft_model
+)
+
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    TrainingArguments,
+    Trainer,
+    DataCollatorForSeq2Seq,
+    BitsAndBytesConfig
+)
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from utils.dataset import get_datasets
+
+MODEL_NAME = "mistralai/Mistral-7B-v0.1"
+CHECKPOINT_SAVE = "models/checkpoint/LORA-tuning_Mistral-7B"
+MODEL_SAVE = "models/LORA-fine-tuned_Mistral-7B"
+
+def print_trainable_parameters(model):
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Trainable parameters: {trainable_params} / {total_params} ({100 * trainable_params / total_params:.2f}%)")
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            print(f"{name}: {param.shape}")
+
+bnb_config = BitsAndBytesConfig(
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_use_double_quant=False
+)
+
+model = AutoModelForCausalLM.from_pretrained(
+    MODEL_NAME,
+    device_map={"": "cuda"},
+    trust_remote_code=True,
+    torch_dtype=torch.float16,
+    quantization_config=bnb_config
+    )
+
+tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+tokenizer.pad_token = tokenizer.eos_token
+
+# Apply LoRA
+config = LoraConfig(
+    r=8,
+    lora_alpha=16,
+    lora_dropout=0.10103742902,
+    target_modules=["q_proj", "v_proj"],
+    bias="none",
+    task_type="CAUSAL_LM",
+)
+
+model = get_peft_model(model, config)
+
+# print_trainable_parameters(model)
+
+def generate_and_tokenize_prompt(filename, initial_text, summary):
+    prompt = f"<titre>: {filename}\n<texte>: {initial_text}\n<résumé>: "
+    summary = f"{summary}{tokenizer.eos_token}"
+    
+    tokenized_prompt = tokenizer(prompt, truncation=True, max_length=2000, add_special_tokens=False)
+    tokenized_summary = tokenizer(summary, truncation=True, max_length=1024, add_special_tokens=False)
+    
+    input_ids = tokenized_prompt.input_ids + tokenized_summary.input_ids
+    labels = [-100] * len(tokenized_prompt.input_ids) + tokenized_summary.input_ids
+    
+    return {
+        'input_ids': input_ids,
+        'labels': labels,
+        'attention_mask': [1] * len(input_ids)
+    }
+
+data_path = "data/cleaned_lapresse_dataset"
+summaries_path = "data/generated_summaries_lapresse"
+
+train_dataset, val_dataset, test_dataset = get_datasets(data_path, summaries_path)
+train_dataset = train_dataset.map(generate_and_tokenize_prompt)
+val_dataset = val_dataset.map(generate_and_tokenize_prompt)
+
+training_args = TrainingArguments(
+    per_device_train_batch_size=1,
+    gradient_accumulation_steps=2,
+    num_train_epochs=3,
+    learning_rate=0.000243194810223,
+    fp16=True,
+    save_total_limit=5,
+    logging_steps=20,
+    output_dir=CHECKPOINT_SAVE,
+    optim="paged_adamw_8bit",
+    lr_scheduler_type="polynomial",
+    warmup_ratio=0.0361028410932,
+    report_to="tensorboard",
+)
+
+os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+model.config.use_cache = False
+
+trainer = Trainer(
+    model=model,
+    train_dataset=train_dataset,
+    args=training_args,
+    data_collator=DataCollatorForSeq2Seq(tokenizer=tokenizer, model=model),
+)
+
+trainer.train()
+
+# Save final model
+os.makedirs("models", exist_ok=True)
+model.save_pretrained(MODEL_SAVE)
+tokenizer.save_pretrained(MODEL_SAVE)

@@ -4,7 +4,6 @@ import sys
 
 from peft import (
     LoraConfig,
-    PrefixTuningConfig,
     get_peft_model
 )
 
@@ -13,48 +12,60 @@ from transformers import (
     AutoTokenizer,
     TrainingArguments,
     Trainer,
-    DataCollatorForSeq2Seq
+    DataCollatorForSeq2Seq,
+    BitsAndBytesConfig
 )
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.dataset import get_datasets
 
-
 MODEL_NAME = "meta-llama/Llama-3.2-3B"
+CHECKPOINT_SAVE = "models/checkpoint/LORA-tuning_Llama-3.2-3B"
+MODEL_SAVE = "models/LORA-fine-tuned_Llama-3.2-3B"
+
+def print_trainable_parameters(model):
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Trainable parameters: {trainable_params} / {total_params} ({100 * trainable_params / total_params:.2f}%)")
+    for name, param in model.named_parameters():
+        if param.requires_grad:
+            print(f"{name}: {param.shape}")
+
+bnb_config = BitsAndBytesConfig(
+    load_in_8bit = True,
+    llm_int8_threshold = 6.0,
+)
 
 model = AutoModelForCausalLM.from_pretrained(
     MODEL_NAME,
-    device_map="auto",
+    device_map={"": "cuda"},
     trust_remote_code=True,
-    torch_dtype=torch.float16
-)
+    torch_dtype=torch.float16,
+    quantization_config=bnb_config
+    )
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 tokenizer.pad_token = tokenizer.eos_token
 
+# Apply LoRA
 config = LoraConfig(
-    r=32,
-    lora_alpha=64,
-    lora_dropout=0.05,
+    r=64,
+    lora_alpha=128,
+    lora_dropout=0.13591984779369298,
     target_modules=["q_proj", "v_proj"],
     bias="none",
-    task_type="CAUSAL_LM"
+    task_type="CAUSAL_LM",
 )
 
 model = get_peft_model(model, config)
 
-adapter_config = PrefixTuningConfig(
-    task_type="CAUSAL_LM",
-    num_virtual_tokens=40,
-    prefix_projection=True,
-)
-model = get_peft_model(model, adapter_config)
+# print_trainable_parameters(model)
 
 def generate_and_tokenize_prompt(filename, initial_text, summary):
     prompt = f"<titre>: {filename}\n<texte>: {initial_text}\n<résumé>: "
     summary = f"{summary}{tokenizer.eos_token}"
     
-    tokenized_prompt = tokenizer(prompt, truncation=True, max_length=4096, add_special_tokens=False)
+    tokenized_prompt = tokenizer(prompt, truncation=True, max_length=2300, add_special_tokens=False)
     tokenized_summary = tokenizer(summary, truncation=True, max_length=1024, add_special_tokens=False)
     
     input_ids = tokenized_prompt.input_ids + tokenized_summary.input_ids
@@ -70,29 +81,31 @@ data_path = "data/cleaned_lapresse_dataset"
 summaries_path = "data/generated_summaries_lapresse"
 
 train_dataset, val_dataset, test_dataset = get_datasets(data_path, summaries_path)
-print(len(train_dataset))
-
 train_dataset = train_dataset.map(generate_and_tokenize_prompt)
 val_dataset = val_dataset.map(generate_and_tokenize_prompt)
 
+# print('='*100)
+# print(len(train_dataset[1]))
+# print(train_dataset[1])
+# print('\n\n')
+# print('='*100)
+
 training_args = TrainingArguments(
     per_device_train_batch_size=1,
-    gradient_accumulation_steps=8,
+    gradient_accumulation_steps=4,
     num_train_epochs=3,
-    learning_rate=2e-4,
+    learning_rate=0.00018785317317224597,
     fp16=True,
-    save_total_limit=3,
+    save_total_limit=5,
     logging_steps=20,
-    output_dir="output_dir",
+    output_dir=CHECKPOINT_SAVE,
     optim="paged_adamw_8bit",
-    lr_scheduler_type="cosine",
-    warmup_ratio=0.05,
+    lr_scheduler_type="polynomial",
+    warmup_ratio=0.02343885260014309,
     report_to="tensorboard",
 )
 
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
-# os.environ["TOKENIZERS_PARALLELISM"] = "false"
-
 model.config.use_cache = False
 
 trainer = Trainer(
@@ -104,7 +117,7 @@ trainer = Trainer(
 
 trainer.train()
 
-model_save_path = "models/fine_tuned_llama3.2-3B_V1"
+# Save final model
 os.makedirs("models", exist_ok=True)
-model.save_pretrained(model_save_path)
-tokenizer.save_pretrained(model_save_path)
+model.save_pretrained(MODEL_SAVE)
+tokenizer.save_pretrained(MODEL_SAVE)

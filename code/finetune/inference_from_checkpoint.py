@@ -1,20 +1,21 @@
 import os
 import torch
+import sys
 from tqdm import tqdm
 
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
 # Define model and directory paths.
-model_save_path = "models/LORA-fine-tuned_Mistral-7B"
-base_model_name = "mistralai/Mistral-7B-v0.1"  # Ensure this matches your fine-tuning
+checkpoint_path = "models/checkpoint/prefix-tuning_Mistral-7B/checkpoint-4000"
+base_model_name = "mistralai/Mistral-7B-v0.1"
 input_dir = "data/cleaned_lapresse_dataset"
 output_dir = "data/LORA-tuning_Mistral-7B_summaries"
-batch_size = 8
+batch_size = 16
 
 os.makedirs(output_dir, exist_ok=True)
 
-# Load the base model.
+# Load the base model
 print(f"Loading base model: {base_model_name}")
 base_model = AutoModelForCausalLM.from_pretrained(
     base_model_name,
@@ -23,23 +24,27 @@ base_model = AutoModelForCausalLM.from_pretrained(
     torch_dtype=torch.float16
 )
 
-# Load the fine-tuned PEFT adapter.
-print(f"Loading fine-tuned adapter from: {model_save_path}")
-model = PeftModel.from_pretrained(base_model, model_save_path)
+# Load the prefix-tuning checkpoint
+print(f"Loading prefix-tuning checkpoint from: {checkpoint_path}")
+model = PeftModel.from_pretrained(base_model, checkpoint_path)
 
-# Load the tokenizer.
-tokenizer = AutoTokenizer.from_pretrained(model_save_path)
+# Load the tokenizer
+# If you saved the tokenizer inside your prefix-tuning checkpoint,
+# you can do:
+#   tokenizer = AutoTokenizer.from_pretrained(checkpoint_path)
+# Otherwise, load from the base model or wherever your tokenizer is stored:
+tokenizer = AutoTokenizer.from_pretrained(base_model_name)
 tokenizer.pad_token = tokenizer.eos_token
 tokenizer.padding_side = "left"
 
-# Define the prompt template.
+# Define the prompt template
 def build_prompt(filename, initial_text):
     return f"<titre>: {filename}\n<texte>: {initial_text}\n<résumé>: "
 
-# Get list of all .txt files in the input directory.
+# Get list of all .txt files in the input directory
 all_files = [f for f in os.listdir(input_dir) if f.endswith('.txt')]
 
-# Filter out already processed files.
+# Filter out already processed files
 all_files = [f for f in all_files if not os.path.exists(os.path.join(output_dir, f))]
 
 print(f"Running inference on {len(all_files)} files in {input_dir}")

@@ -24,7 +24,7 @@ from transformers import (
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils.dataset import get_datasets
 
-MODEL_NAME = "mistralai/Mistral-7B-v0.1"
+MODEL_NAME = "meta-llama/Llama-3.2-3B"
 data_path = "data/cleaned_lapresse_dataset"
 summaries_path = "data/generated_summaries_lapresse"
 
@@ -32,23 +32,18 @@ def objective(trial: optuna.trial.Trial):
     # ----------------------------
     # Sample hyperparameters
     # ----------------------------
-    # LoRA configuration
-    lora_rank = trial.suggest_categorical("lora_rank", [16, 32, 64])
-    lora_alpha = 2 * lora_rank
-    lora_dropout = trial.suggest_float("lora_dropout", 0.01, 0.2)
     
     # Prefix Tuning configuration
     num_virtual_tokens = trial.suggest_int("num_virtual_tokens", 20, 100)
     
     # TrainingArguments configuration
-    gradient_accumulation_steps = trial.suggest_int("gradient_accumulation_steps", 4, 16, step=4)
+    gradient_accumulation_steps = trial.suggest_int("gradient_accumulation_steps", 4, 16)
     learning_rate = trial.suggest_loguniform("learning_rate", 1e-5, 1e-3)
     lr_scheduler_type = trial.suggest_categorical("lr_scheduler_type", ["cosine", "linear", "polynomial"])
     warmup_ratio = trial.suggest_float("warmup_ratio", 0.0, 0.2)
     
     # Print the hyperparameter combination for this trial
     print("Trial parameters:")
-    print(f"  lora_rank: {lora_rank}, lora_alpha: {lora_alpha}, lora_dropout: {lora_dropout}")
     print(f"  num_virtual_tokens: {num_virtual_tokens}")
     print(f"  gradient_accumulation_steps: {gradient_accumulation_steps}")
     print(f"  learning_rate: {learning_rate}")
@@ -91,19 +86,6 @@ def objective(trial: optuna.trial.Trial):
             'labels': labels,
             'attention_mask': [1] * len(input_ids)
         }
-    
-    # ----------------------------
-    # Apply LoRA configuration
-    # ----------------------------
-    lora_config = LoraConfig(
-        r=lora_rank,
-        lora_alpha=lora_alpha,
-        lora_dropout=lora_dropout,
-        target_modules=["q_proj", "v_proj"],
-        bias="none",
-        task_type="CAUSAL_LM"
-    )
-    model = get_peft_model(model, lora_config)
     
     # ----------------------------
     # Apply Prefix Tuning configuration
@@ -187,7 +169,7 @@ print("  Params: ")
 for key, value in trial.params.items():
     print("    {}: {}".format(key, value))
 
-with open("hyper-parameter_config_Llama-3.2-3B.json", "w") as f:
+with open("hyper-parameter_prefix_config_Llama-3.2-3B.json", "w") as f:
     json.dump(trial.params, f, indent=4)
 
-print("Best parameters saved to hyper-parameter_config_Mistral-7B.json")
+print("Best parameters saved to hyper-parameter_prefix_config_Llama-3.2-3B.json")
